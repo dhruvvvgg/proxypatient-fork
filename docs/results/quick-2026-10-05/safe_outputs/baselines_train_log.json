@@ -1,0 +1,62 @@
+{
+  "created": "2026-10-05T14:07:25.085635+00:00",
+  "mock": false,
+  "n_train_rows_used": 20000,
+  "subsample_target": 20000,
+  "stratified_on": [
+    "sex",
+    "age_band",
+    "bmi_band",
+    "hypertension"
+  ],
+  "epochs": 15,
+  "gpu": false,
+  "columns": [
+    "sex",
+    "age_band",
+    "residence",
+    "wealth_quintile",
+    "bmi_band",
+    "hypertension",
+    "tobacco",
+    "alcohol",
+    "age",
+    "bmi",
+    "waist_cm",
+    "hip_cm",
+    "log_glucose",
+    "education",
+    "bp_ever_checked"
+  ],
+  "scope": "complete_conditions",
+  "models": {
+    "tvae": {
+      "train_seconds": 25.1,
+      "probe_rejection_sampling": {
+        "requested": 2000,
+        "filled": 1260,
+        "fill_rate": 0.63,
+        "drawn": 40000,
+        "acceptance_rate": 0.0315,
+        "seconds": 0.62
+      }
+    },
+    "ctgan": {
+      "train_seconds": 41.7,
+      "probe_rejection_sampling": {
+        "requested": 2000,
+        "filled": 1953,
+        "fill_rate": 0.9765,
+        "drawn": 40000,
+        "acceptance_rate": 0.048825,
+        "seconds": 1.13
+      }
+    }
+  },
+  "peak_memory_mib": 1266.56,
+  "run_type": "quick",
+  "preliminary": true,
+  "demo": false,
+  "status_banner": "PRELIMINARY (quick run)",
+  "run_note": "reduced, untuned run; results are indicative only"
+}
