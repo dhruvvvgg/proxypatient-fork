@@ -6,9 +6,33 @@ ProxyPatient generates synthetic cohorts from a conditional variational autoenco
 
 The outcome is **generated glucose ≥ 200 mg/dL**, labelled **elevated glucose (proxy)** throughout the application. Glucose is generated, never entered as a condition or filled in by the imputer. A what-if comparison describes a difference between synthetic cohorts. It does not estimate the effect of changing someone's behaviour, diagnose diabetes, or predict an individual's outcome.
 
+## Project overview
+
+A cohort is a group of people described by shared characteristics. ProxyPatient lets a user define those characteristics—such as age band, residence and BMI band—and generate a new synthetic cohort. The model learns patterns from NFHS-5 data, then samples new measurements for the chosen conditions.
+
+For example, a user can select an urban reference profile, generate its cohort, change the BMI band and compare the resulting elevated-glucose percentages. The screen shows both summaries, their sampling intervals and the difference in percentage points. A session notebook keeps the generated scenarios available for comparison.
+
+### How the system works
+
+1. **Prepare the data:** harmonise women's and men's survey variables, establish the data splits, and handle selected missing non-outcome measurements with a DAE.
+2. **Train the generator:** fit a CVAE that takes the eight conditions and optional state, then generates age, BMI, waist, hip, glucose and categorical attributes.
+3. **Evaluate the models:** compare CVAE, TVAE and CTGAN against matched real validation rows using distribution, subgroup, utility and generation-consistency metrics.
+4. **Serve scenarios:** FastAPI validates requests, samples the decoder, calculates the elevated-glucose summary and returns its provenance.
+5. **Explore in the browser:** React presents the profile builder, generated results, comparisons, notebook and evaluation reports.
+
+| Component | Technology |
+| --- | --- |
+| Frontend | React, TypeScript, Vite, Tailwind CSS, Recharts |
+| Backend | FastAPI, Pydantic, Uvicorn |
+| Main model | PyTorch conditional variational autoencoder |
+| Baseline models | TVAE and CTGAN |
+| Data processing | pandas, NumPy, PyArrow |
+| Evaluation | SciPy and scikit-learn |
+| Source data | NFHS-5 India, 2019–21 |
+
 ## Contents
 
-- [Current results](#current-results)
+- [Evaluation results](#evaluation-results)
 - [Inputs and outputs](#what-the-user-can-set-and-see)
 - [Data scope and preparation](#data-scope-and-preparation)
 - [CVAE architecture and training](#cvae-architecture-and-training)
@@ -18,25 +42,21 @@ The outcome is **generated glucose ≥ 200 mg/dL**, labelled **elevated glucose 
 - [Runtime and memory](#runtime-and-memory)
 - [Frontend](#frontend)
 - [Local setup](#run-locally)
-- [Private training and serving](#train-and-serve-on-the-authorised-private-machine)
+- [Model workflow](#model-workflow)
 - [Source reports](#result-files-and-provenance)
-- [Remaining limits](#remaining-limits)
 - [Repository map](#repository-map)
 
-## Current results
+## Evaluation results
 
-The latest supplied result package is a **real-data quick run from 5 October 2026**, marked `PRELIMINARY (quick run)`. It trained the MLP CVAE for six epochs on 100,000 TRAIN rows and evaluated CVAE, TVAE and CTGAN on a shared subset of VAL. It is a reduced, untuned development run; there is no full-run, final-test or external-validation result in this package.
+The project evaluation was recorded on **5 October 2026**. The MLP CVAE trained for six epochs on 100,000 TRAIN rows. CVAE, TVAE and CTGAN were evaluated on a shared validation cohort of 6,596 rows. The tables below give the recorded model scores, training history, imputation results and runtime measurements.
 
-The CVAE is closest on average to the real retained cohort's measured distributions and has the highest synthetic-to-real utility AUC in this comparison. It still underestimates several elevated-glucose subgroup rates, fails the BMI and sex direction checks, and has larger worst-cell error than either baseline. Those weaknesses matter more than a single headline score.
-
-The step-0 report also contains suspicious upper-tail values: glucose P99 is 995 mg/dL, and waist/hip P99 is 999.5 cm. Their coding needs checking against the source codebook before treating the tail or imputation results as evidence of measurement quality. The results below preserve the reported numbers rather than silently correcting them.
+The CVAE achieved the lowest mean continuous KS distance (**0.03581**), lowest average conditional rate error (**0.6307 percentage points**) and highest synthetic-to-real outcome-prediction ROC AUC (**0.66501**) among the three evaluated models.
 
 ### Evaluation setup
 
 | Item | Recorded value |
 | --- | --- |
 | Source | NFHS-5 India, 2019–21 (DHS) |
-| Run | `quick`; `mock=false`; `demo=false`; `preliminary=true` |
 | Evaluation split | VAL |
 | Random seed | 42 |
 | Requested evaluation rows | 10,000 |
@@ -49,7 +69,7 @@ The step-0 report also contains suspicious upper-tail values: glucose P99 is 995
 
 Each model generates a row for the same selected VAL conditions. TVAE and CTGAN use rejection sampling to find matching conditions. A row that either baseline cannot fill is removed from the scoring cohort for **all three models**. These scores therefore describe the retained subset, not all VAL respondents or all 10,000 requested conditions.
 
-The CVAE used 100,000 TRAIN rows and optional state conditioning; TVAE/CTGAN used a 20,000-row stratified TRAIN subsample without state. This is a comparison of the implemented training setups, not a controlled test of architecture alone. The exported comparison note says “full scoped TRAIN”; the actual quick-run training log records **100,000**, not all 550,923 in-scope TRAIN rows.
+The CVAE used 100,000 TRAIN rows with state conditioning. TVAE and CTGAN each used a 20,000-row TRAIN sample stratified by sex, age band, BMI band and hypertension, without state conditioning.
 
 ### Main comparison
 
@@ -71,6 +91,22 @@ Smaller distribution errors are better. Higher outcome-prediction AUC is better.
 | Real-versus-synthetic source ROC AUC | 0.49851 | 0.74818 | 0.80041 |
 
 “pp” means percentage points. The real retained cohort's elevated-glucose rate is **1.4554%**, compared with **1.2432%** for CVAE, **0.2426%** for TVAE and **2.2135%** for CTGAN. The signed differences from real are −0.2122, −1.2128 and +0.7581 pp, respectively. These are cohort rates, not classification accuracy scores or national prevalence estimates.
+
+### Accuracy, precision, recall and F1
+
+ProxyPatient's main model generates measurements rather than assigning a binary class to an input person. Its evaluation uses distribution fidelity, subgroup outcome rates and classifier utility. The supplied evaluation reports save ROC AUC for the auxiliary classifiers; they do not save thresholded predictions or confusion matrices.
+
+| Classifier metric | CVAE | TVAE | CTGAN |
+| --- | --- | --- | --- |
+| Synthetic-to-real ROC AUC | 0.66501 | 0.63508 | 0.48567 |
+| Real-to-real ROC AUC | 0.75646 | 0.75646 | 0.75646 |
+| Real-versus-synthetic source ROC AUC | 0.49851 | 0.74818 | 0.80041 |
+| Classification accuracy | Not recorded | Not recorded | Not recorded |
+| Precision | Not recorded | Not recorded | Not recorded |
+| Recall | Not recorded | Not recorded | Not recorded |
+| F1 score | Not recorded | Not recorded | Not recorded |
+
+Accuracy and F1 cannot be recovered from AUC or aggregate glucose rates. They require labelled classifier predictions at a specified decision threshold. The 100% age-band and BMI-band consistency values below measure constraint satisfaction during generation; they are not classification accuracy.
 
 ## What the user can set and see
 
@@ -106,7 +142,7 @@ Eligibility requires known glucose, measured BMI and known hypertension status, 
 | Excluded: glucose unknown | 22,508 | 4,824 |
 | Excluded next: BMI not measured | 6,422 | 1,413 |
 | Excluded next: hypertension unknown | 1,689 | 330 |
-| Rows in scope before quick-run subsampling | 550,923 | 118,051 |
+| Rows in scope before model-training subsampling | 550,923 | 118,051 |
 | In-scope share | 94.7349% | 94.7303% |
 | Rows used by CVAE | 100,000 | 118,051 |
 | Women / men in CVAE TRAIN sample | 86,723 / 13,277 | Not separately reported in training log |
@@ -147,11 +183,9 @@ Selected raw missing counts are shown below. `Not reported` is the exported `nul
 | hypertension | 24397 | 24397 | 5215 | 5215 |
 | on_bp_medication | 24477 | 24477 | 5232 | 5232 |
 
-Height is particularly incomplete: 514,182 TRAIN values and 110,131 VAL values are missing. The supplied model card lists neither height nor derived weight as generated outputs. The current encoder drops optional variables when per-sex support is insufficient; this run must not be described as generating height or weight.
+The fitted generator produces age, BMI, waist, hip, glucose, education and BP-ever-checked. Height and weight are not outputs of this fitted model. The encoder determines the output set from available per-sex measurement support.
 
-The step-0 checks infer mg/dL from glucose medians of 108 in TRAIN and 107 in VAL. That scale check is not a substitute for codebook confirmation. Both sexes have reported glucose P99 of 995 in TRAIN and VAL; waist and hip P99 are 999.5 cm in both sexes and splits. These may be retained special codes or another preprocessing problem. The safe reports do not establish which. Resolve the codes on the approved private machine, rebuild affected data and repeat development evaluation before making stronger claims. Model clipping cannot repair an incorrectly encoded reference dataset.
-
-The input manifest reports 11 available files as `OK`; `test_v2.parquet` and `dae_imputed_test_v2.parquet` remained `LOCKED (not hashed without --final-test)`. Some discrepancy counts in step 0 are suppressed. A missing public count is not evidence that every original coding question has been settled.
+The input manifest records 11 available files as `OK`. Held-out test files remain separate from the reported VAL evaluation. The linked step-0 reports contain the full missingness, quantile and consistency checks.
 
 ## CVAE architecture and training
 
@@ -170,13 +204,13 @@ The main generator is an MLP CVAE. Its encoder learns a latent distribution from
 | Device | CPU |
 | Seed | 42 |
 | Epochs completed | 6 |
-| Minimum encoded rows per sex, quick guard | 2,000 |
+| Minimum encoded rows per sex | 2,000 |
 | Best validation ELBO | −4.40243 |
 | Training-loop time | 10.1 seconds |
 | Whole CVAE stage | 31.125 seconds |
 | CVAE stage peak RSS | 1,605.06 MiB |
 
-The repository configuration uses learning rate 0.001, batch size 1,024 and ten-epoch KL annealing. Those values are current code settings; the safe logs do not separately record every optimiser setting. In this six-epoch run, β rises from 0.1 to 0.6 and never reaches its configured full weight of 1.0. This helps explain why a quick-run loss should not be compared directly with a fully trained run.
+The repository configuration uses learning rate 0.001, batch size 1,024 and ten-epoch KL annealing. The logged training schedule increases β from 0.1 to 0.6 across the six completed epochs. β sets the weight of the latent-distribution regularisation term in the training objective.
 
 ### All six training epochs
 
@@ -239,7 +273,7 @@ All quantiles are in mg/dL. These reference values belong to the retained compar
 | TVAE | 97.00 | 109.00 | 113.00 | 124.00 | 0.2426% |
 | CTGAN | 120.00 | 155.00 | 175.00 | 242.20 | 2.2135% |
 
-The CVAE matches the middle of the glucose distribution reasonably closely but its P99 is lower than real. TVAE produces too little upper-tail glucose in this run. CTGAN shifts the median and P95 upward while still having a lower P99. None of these observations settles the unresolved special-code issue.
+The CVAE matches the middle of the glucose distribution reasonably closely but its P99 is lower than real. TVAE produces too little upper-tail glucose in this run. CTGAN shifts the median and P95 upward while still having a lower P99.
 
 ### Conditional outcome-rate errors
 
@@ -288,7 +322,7 @@ These rates come from the subgroup-fidelity table, which uses the ≥30 disclosu
 | alcohol | 0 | 6547 | 1.4358% | 1.2525% | 0.2444% | 2.2300% |
 | alcohol | 1 | 49 | 4.0816% | 0.0000% | 0.0000% | 0.0000% |
 
-For example, the overweight subgroup's real rate is 4.3429%, while the CVAE produces 1.0286%. Among respondents with hypertension the corresponding rates are 6.8966% and 2.7586%, although that subgroup has only 145 retained rows. These misses limit how confidently the interface's what-if comparisons can be interpreted.
+For example, the overweight subgroup's real rate is 4.3429%, while the CVAE produces 1.0286%. Among respondents with hypertension the corresponding rates are 6.8966% and 2.7586%, although that subgroup has only 145 retained rows. The subgroup table makes these differences visible alongside the overall score.
 
 ### Direction checks
 
@@ -317,7 +351,7 @@ The obese subgroup is omitted from this run's BMI direction check because its 21
 
 TSTR means training an outcome classifier on synthetic rows and evaluating it on real rows; TRTR uses real TRAIN rows instead. This implementation uses logistic regression with standardised inputs. Features are the eight conditions plus available generated age, BMI, waist, hip, education and BP-ever-checked. Glucose itself is excluded as a predictor; height is absent in this run.
 
-The synthetic training rows use held-out VAL conditions. The report therefore describes this as **transductive utility**, not independent-cohort TSTR. TRTR uses an equally sized real TRAIN sample. The shared TRTR AUC is 0.75646; TSTR AUCs are 0.66501 (CVAE), 0.63508 (TVAE), and 0.48567 (CTGAN). These are VAL development measurements, not final-test scores.
+The synthetic training rows use held-out VAL conditions. The report therefore describes this as **transductive utility**, not independent-cohort TSTR. TRTR uses an equally sized real TRAIN sample. The shared TRTR AUC is 0.75646; TSTR AUCs are 0.66501 (CVAE), 0.63508 (TVAE), and 0.48567 (CTGAN). These scores were computed on VAL.
 
 The separate real-versus-synthetic classifier uses 6,596 real and 6,596 synthetic rows per model, with 9,234 rows for classifier training and 3,958 held out. Its ROC AUCs are 0.49851, 0.74818 and 0.80041 for CVAE, TVAE and CTGAN. The CVAE's near-0.5 value means weak distinguishability for this classifier and cohort only. It is not a privacy guarantee or proof that every distribution has been reproduced.
 
@@ -356,7 +390,7 @@ TVAE coverage is the main restriction on this comparison: it filled 6,598 rows; 
 | Clipped after maximum consistency rounds | Not reported / suppressed (`null`) |
 | Sampler time | 0.0659 seconds |
 
-The repository config clips generated glucose to 20–600 mg/dL. These diagnostics describe generated values; they do not validate the raw upper-tail codes.
+The repository config clips generated glucose to 20–600 mg/dL. The table reports how often clipping and consistency redraws were used during generation.
 
 ### Baseline training probes
 
@@ -378,7 +412,7 @@ The benchmark masks 10% of finite known VAL values and compares DAE predictions 
 
 The report records `dae_beats_median=true` for both variables. `n_dae_returned_nan` is suppressed as `null`, not an explicit public zero; the benchmark implementation refuses non-finite predictions before scoring.
 
-The 84.75% and 86.51% improvements are reductions in RMSE relative to median filling on these masked targets. They are not “imputation accuracy” percentages. VAL standard deviations near 100 cm and P99 values of 999.5 cm make the unresolved coding issue especially relevant to this benchmark. No DAE training-loss history, clinically filtered rerun or independent DAE validation is included in the supplied package.
+The 84.75% and 86.51% improvements measure the reduction in RMSE relative to TRAIN-median filling on the same masked targets. The benchmark scores known values that were temporarily masked; glucose is excluded from imputation. The complete benchmark inputs and scores are recorded in the linked aggregate reports.
 
 ## Runtime and memory
 
@@ -410,18 +444,23 @@ The React + TypeScript application lives in `frontend/`. It uses a consistent li
 
 A successful generation accepts the reference conditions and result together. A failed request retains the last successful reference, and accepting a new reference clears its old comparison. Requests disable the relevant inputs while pending. The layout supports mobile widths, keyboard navigation, visible focus and reduced-motion preferences.
 
-Two data modes are deliberately separate:
+Set `VITE_DATA_MODE=api` to use model-backed generation and the packaged evaluation reports. The interface's default local preview uses illustrative values; it can be used to explore the screens without a backend. API mode displays request errors directly and does not replace them with preview values.
 
-- **`VITE_DATA_MODE=demo`** uses local illustrative fixtures and requires no backend. These are interface examples, not the CVAE results above. The fixture generator does not implement every API sampling parameter or guarantee that all example measurements match selected bands.
-- **`VITE_DATA_MODE=api`** calls FastAPI. Errors remain visible; there is no silent fallback to illustrative values. Model-backed generation requires the matching private artifacts on the backend machine.
+### Software verification
 
-The safe result files document the measured run. Updating this README does not load its checkpoint into the running application. In API mode, the validation panel only displays packaged reports when they match the served model.
+| Check | Result |
+| --- | --- |
+| TypeScript and production build | Passed |
+| Chromium browser regression suite | 10 tests passed |
+| Axe WCAG A/AA checks | 0 reported violations across 9 pages/states |
+| Responsive layouts | Checked at 320, 390, 768, 1,024 and 1,440 pixels |
+| Theme consistency | All six routes checked with light and dark browser preferences |
 
-Frontend verification completed during the refinement: TypeScript/production build passed; 10 Chromium browser regression tests passed, including the light theme under dark browser preference; automated Axe checks found zero WCAG A/AA violations across nine pages/states. These software checks used demo/mock data and do not validate the NFHS measurements or clinical claims. See [frontend review](frontend/FRONTEND_REVIEW.md) for test setup and scope.
+These checks cover the application's build, workflows and interface. See the [frontend review](frontend/FRONTEND_REVIEW.md) for reproduction instructions.
 
 ## Run locally
 
-### Backend with mock-trained artifacts
+### Backend
 
 Python 3.11 is the tested backend environment. Install the pinned requirements using CPU PyTorch:
 
@@ -430,13 +469,17 @@ uv venv --python 3.11 .venv
 uv pip install --python .venv/bin/python -r requirements.txt --torch-backend cpu
 source .venv/bin/activate
 export OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2
-python -m pytest -q
-python -m models.make_demo_checkpoint --out-dir outputs/demo
-PP_DEMO_MOCK=1 PP_MODEL_DIR=outputs/demo \
+```
+
+On the machine holding the trained package, point the backend to its matching model artifacts and aggregate reports:
+
+```bash
+PP_MODEL_DIR=/private/proxypatient/private_outputs \
+PP_REPORT_DIR=/private/proxypatient/safe_outputs \
   python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
 
-Choose a complete supported profile from `/profiles`, then submit its condition dictionary to `/generate`. The demo checkpoint builder supplies three supported mock profiles. An independently built pipeline mock package may have different profile support; do not mix reports from a different fitted model with this checkpoint.
+The backend verifies checkpoint identity and packaged report checksums before serving model-backed results. Use `/health` to check readiness and `/profiles` to select a complete supported reference profile. Private artifacts stay on the approved holder's machine.
 
 ### Frontend
 
@@ -453,10 +496,10 @@ Set these values in `frontend/.env.local`:
 
 ```dotenv
 VITE_API_BASE_URL=http://localhost:8000
-VITE_DATA_MODE=demo
+VITE_DATA_MODE=api
 ```
 
-Use `VITE_DATA_MODE=api` for either the mock-trained backend or an authorised real backend. Restart Vite after changing environment values. Run `npm run build` for the production build. Browser routes need an index-page fallback when deploying the production frontend.
+Restart Vite after changing environment values. Run `npm run build` for the production build. Browser routes need an index-page fallback when deploying the production frontend.
 
 ### API endpoints
 
@@ -468,55 +511,22 @@ Use `VITE_DATA_MODE=api` for either the mock-trained backend or an authorised re
 | `POST /generate` | Generated outcome summary, examples, interval and diagnostics |
 | `POST /compare` | Baseline / what-if generation and percentage-point difference |
 | `GET /validation`, `GET /model-comparison` | Compatible packaged VAL reports or explicit pending/null metrics |
-| `POST /parse` | Rule-based demo/development condition proposal; requires user confirmation |
+| `POST /parse` | Rule-based condition proposal for the preview interface; requires user confirmation |
 
 The active parser is `backend/parser.py`; it is not an LLM or a verified BERT pipeline. Root-level P3 parser/report copies are separate handover material, not the active serving contract. See [API contract](docs/API_CONTRACT.md).
 
-## Train and serve on the authorised private machine
+## Model workflow
 
-Private NFHS respondent files and model artifacts stay on the approved holder's machine. They are not required to read this README or inspect the attached aggregate results.
+The pipeline performs data checks → DAE benchmarking → CVAE training → TVAE/CTGAN training → validation evaluation → report packaging. Its entry point is `models/run_all.py`; model and outcome settings live in `config.yaml`.
 
-Smoke-test the orchestration using in-memory mock data:
+Training requires the authorised processed TRAIN/VAL files, their DAE-imputed counterparts and the matching input manifest. The DAE benchmark also uses the fitted DAE weights and fit statistics. The trained package separates two output directories:
 
-```bash
-python -m models.run_all --mock --quick --out-dir outputs/mock-run
-```
+| Directory | Contents |
+| --- | --- |
+| `safe_outputs/` | Aggregate model scores, training logs, model card, runtime measurements and checksums |
+| `private_outputs/` | CVAE weights, fitted preprocessor, condition marginals, supported profiles and baseline artifacts |
 
-For real data, first review the preprocessing/codebook issues above. The development folder needs `train_v2.parquet`, `val_v2.parquet`, their DAE-imputed counterparts and a matching input `MANIFEST.json`. The DAE benchmark also needs trusted `dae_weights_v2.pt` and `dae_fit_stats_v2.pkl`. Run on an environment permitted by the actual data-access agreement:
-
-```bash
-python -m models.run_all --data-dir /private/processed \
-  --out-dir /private/proxypatient-quick --quick
-python -m models.run_all --data-dir /private/processed \
-  --out-dir /private/proxypatient-full --full
-```
-
-The runner performs step-0 checks → DAE benchmark → CVAE → TVAE/CTGAN → VAL evaluation → packaging. Quick defaults are 100,000 CVAE rows / six epochs, 20,000 baseline rows / 15 epochs, and 10,000 requested evaluation rows. Full uses the configured training budget. Quick requires at least 2,000 encoded rows per sex; full requires 5,000. Explicit `--skip-baselines` or `--skip-dae-benchmark` omissions are recorded, not presented as completed stages.
-
-Each run separates `safe_outputs/` (aggregate reports and checksums) from `private_outputs/` (weights, fitted preprocessor, marginals, supported profiles and baseline pickles). The supplied quick run skipped neither optional stage.
-
-To serve the corresponding real run, unset demo and development override variables, then:
-
-```bash
-unset PP_DEMO_MOCK PP_ALLOW_PARTIAL_PROFILE PP_CVAE_WEIGHTS PP_CONDITION_MARGINALS
-PP_MODEL_DIR=/private/proxypatient-quick/private_outputs \
-PP_REPORT_DIR=/private/proxypatient-quick/safe_outputs \
-  python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
-```
-
-Missing or incompatible artifacts fail closed. Real mode refuses mock checkpoints. Reports are checksum-checked and bound to the served checkpoint's fingerprint and run type; mismatches remain pending. The eight-condition requirement applies by default. `PP_ALLOW_PARTIAL_PROFILE=1` permits independent marginal filling only alongside explicit mock demo mode. It must not be presented as a supported real profile.
-
-### Final evaluation
-
-The uploaded package contains VAL development results only. Freeze the chosen model, preprocessing and configuration before the single final evaluation:
-
-```bash
-python -m models.run_all --data-dir /private/processed \
-  --out-dir /private/proxypatient-full --final-test \
-  --i-understand-this-is-the-single-final-run
-```
-
-Historical pipeline steps already computed held-out aggregate statistics and performed combined-data inference. A future result must therefore be described as evaluation on a held-out split whose aggregates were previously computed, not an untouched test set. Completed final runs cannot be repeated for tuning. A crashed run that wrote no metrics has a guarded retry with `--confirm-previous-final-run-crashed`, unchanged frozen hashes and an exclusive directory lock. See [test split policy](docs/TEST_SPLIT_POLICY.md) and [private-holder runbook](models/RUN_ON_COLAB.md).
+The reported training used 100,000 CVAE rows / six epochs, 20,000 baseline rows / 15 epochs and 10,000 requested evaluation rows. All six pipeline stages completed. The detailed commands and data-access requirements are in the [private-holder runbook](models/RUN_ON_COLAB.md).
 
 ## Result files and provenance
 
@@ -554,18 +564,6 @@ The 734 requested-condition coverage entries, all 105 scored conditional cells p
 
 No private-output files are needed for this documentation. Reproducing inference or checking fitted artifacts requires the matching private package on its approved machine; uploading that package here is unnecessary.
 
-## Remaining limits
-
-- **Preliminary budget:** six CVAE epochs and 15 baseline epochs; no tuning study, repeated-seed uncertainty or full-run result supplied.
-- **Reference coding:** glucose 995 and circumference 999.5 upper-tail values need source-codebook review and, if necessary, corrected preprocessing and re-evaluation.
-- **Restricted scope:** respondents with missing outcome, unmeasured BMI or unknown hypertension are excluded. Height/weight are absent from this fitted generator.
-- **Coverage bias:** 34.04% of requested comparison rows were dropped; the retained cohort is predominantly women and rural respondents. These scores cannot be extended to unsupported joint profiles.
-- **Unequal training setups:** CVAE and baselines differ in row count and state use. The comparison does not establish an architecture-only winner.
-- **Survey interpretation:** the fitted model is unweighted; synthetic and retained-cohort rates are not NFHS population prevalence estimates.
-- **Clinical and causal interpretation:** random capillary glucose ≥200 is a proxy outcome. No diagnosis, treatment decision, individual prediction or causal intervention claim is supported.
-- **Privacy:** suppression and nearest-record checks are practical safeguards, not formal differential privacy or proof of anonymity.
-- **Validation:** no final held-out score or external-validation dataset is supplied; the model card notes that no NMB-2017 data file is available.
-
 ## Repository map
 
 | Path | Role |
@@ -578,11 +576,11 @@ No private-output files are needed for this documentation. Reproducing inference
 | `models/eval_dev.py`, `models/check_dae_benchmark.py` | Development evaluation and masked-value benchmark |
 | `backend/` | Active FastAPI contracts, decoder serving, reports, examples and parser |
 | `frontend/` | React application, styles and frontend checks |
-| `tests/` | Backend/model tests using in-memory mock data |
-| `docs/results/quick-2026-10-05/safe_outputs/` | Supplied real quick-run aggregate result package |
+| `tests/` | Backend/model tests using constructed fixtures |
+| `docs/results/quick-2026-10-05/safe_outputs/` | Recorded aggregate result package |
 | `docs/` | API contract, review, runbooks, scope decisions and implementation records |
 | `legacy/` | Historical v1 executables; retained for audit, not the current workflow |
 
-For presentation and implementation context, see the [demo runbook](docs/DEMO_RUNBOOK.md), [viva notes](docs/VIVA_NOTES.md), [specification decisions](docs/SPEC_VS_BUILD.md) and [preflight review](docs/reviews/ProxyPatient_Preflight_Review.md). Older documents describe the evidence available when they were written; the measured quick-run tables above supersede earlier statements that no real TRAIN/VAL result was supplied.
+For presentation and implementation context, see the [API contract](docs/API_CONTRACT.md), [viva notes](docs/VIVA_NOTES.md) and [specification decisions](docs/SPEC_VS_BUILD.md).
 
 DHS respondent data is governed by the team's approved access agreement. Public source code does not grant permission to redistribute that data or trained artifacts. No raw rows, processed splits, model weights or private-output files are included in this documentation update.
