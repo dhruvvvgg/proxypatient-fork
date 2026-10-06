@@ -1,0 +1,41 @@
+{
+  "run_type": "quick",
+  "preliminary": true,
+  "demo": false,
+  "status_banner": "PRELIMINARY (quick run)",
+  "run_note": "reduced, untuned run; results are indicative only",
+  "mock": false,
+  "stages": [
+    {
+      "stage": "step0",
+      "runtime_seconds": 105.786,
+      "peak_memory_mib": 1039.34
+    },
+    {
+      "stage": "dae_benchmark",
+      "runtime_seconds": 4.891,
+      "peak_memory_mib": 1046.71
+    },
+    {
+      "stage": "train_cvae",
+      "runtime_seconds": 31.125,
+      "peak_memory_mib": 1605.06
+    },
+    {
+      "stage": "train_baselines",
+      "runtime_seconds": 78.105,
+      "peak_memory_mib": 1266.56
+    },
+    {
+      "stage": "eval_dev",
+      "runtime_seconds": 31.957,
+      "peak_memory_mib": 2046.48
+    },
+    {
+      "stage": "package",
+      "runtime_seconds": 1.851,
+      "peak_memory_mib": 580.02
+    }
+  ],
+  "skipped_stages": []
+}

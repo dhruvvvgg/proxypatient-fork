@@ -1,0 +1,32 @@
+{
+  "mock": false,
+  "results": {
+    "waist_cm": {
+      "n_known_val": 120874,
+      "n_masked": 12087,
+      "n_dae_returned_nan": null,
+      "train_median": 77.2,
+      "val_known_sd": 100.8551,
+      "rmse_dae": 15.5759,
+      "rmse_median": 102.1253,
+      "dae_beats_median": true,
+      "improvement_pct": 84.75
+    },
+    "hip_cm": {
+      "n_known_val": 120874,
+      "n_masked": 12087,
+      "n_dae_returned_nan": null,
+      "train_median": 89.4,
+      "val_known_sd": 99.478,
+      "rmse_dae": 13.9399,
+      "rmse_median": 103.3214,
+      "dae_beats_median": true,
+      "improvement_pct": 86.51
+    }
+  },
+  "run_type": "quick",
+  "preliminary": true,
+  "demo": false,
+  "status_banner": "PRELIMINARY (quick run)",
+  "run_note": "reduced, untuned run; results are indicative only"
+}

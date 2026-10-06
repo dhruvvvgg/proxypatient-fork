@@ -1,0 +1,59 @@
+{
+  "run_type": "quick",
+  "preliminary": true,
+  "demo": false,
+  "status_banner": "PRELIMINARY (quick run)",
+  "run_note": "reduced, untuned run; results are indicative only",
+  "mock": false,
+  "skipped_stages": [],
+  "files": [
+    {
+      "file": "README.md",
+      "sha256": "928ea02ffc4e0f0bf7e8de436c33522f121496382ab9e2f0a358d64d3956c8b7"
+    },
+    {
+      "file": "baselines_train_log.json",
+      "sha256": "abaf38a1b37a495447fbd798f987bc82d5c729915c8891030beb77e563f4be05"
+    },
+    {
+      "file": "cvae_train_log.json",
+      "sha256": "dd440bdd6c1efffb33da3e92c792f511015adca1c71044fb64dc2501e7da7180"
+    },
+    {
+      "file": "dae_benchmark.json",
+      "sha256": "1c3616f9a29906995e89e0211b3f8aad7bffa0f69d37d422de77d8d336834c04"
+    },
+    {
+      "file": "dae_benchmark.md",
+      "sha256": "97e1bc13b9c9457308d7c98629592579441141a6ba08aebb4d134d351a330fe2"
+    },
+    {
+      "file": "model_card.json",
+      "sha256": "c6f172826401db7dbe05abe7df0cee41059eefc4c23570ad0417dacaf6483d62"
+    },
+    {
+      "file": "model_comparison_dev.json",
+      "sha256": "e2f3ccc16ede006a1604dd1ad6d58b4455bc8d13a1f2bb1ec80f7209237ad556"
+    },
+    {
+      "file": "model_comparison_dev.md",
+      "sha256": "6082c4f49b4ea2205782566eef64d570ebc3db94c37995e4cc1cd8bd9aa747ef"
+    },
+    {
+      "file": "run_metrics.json",
+      "sha256": "47c2245639095b5d176b1f1aec5178ef62c5cc9c6d7efedefe3a062404d2b8e9"
+    },
+    {
+      "file": "step0.json",
+      "sha256": "80fa6a13d66a4b843a2bfce67c473e6089174975192057c0310919602f6e8803"
+    },
+    {
+      "file": "step0.md",
+      "sha256": "9a9c7b8dd4f183ed20894daf0b68173ad3b69b0ca6210ce6123b91b4aef9785c"
+    },
+    {
+      "file": "timings.json",
+      "sha256": "0c61c10af13100bc71ead1b1008cea30027a8cf261a692d0bc9e4407887738e7"
+    }
+  ]
+}

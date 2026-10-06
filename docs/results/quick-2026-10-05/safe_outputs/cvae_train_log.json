@@ -1,0 +1,192 @@
+{
+  "started": "2026-10-05T14:07:03.845526+00:00",
+  "mock": false,
+  "min_rows_per_sex": 2000,
+  "device": "cpu",
+  "variant": "mlp",
+  "glucose_head": "mixture",
+  "n_train": 100000,
+  "n_val": 118051,
+  "dropped_incomplete": {
+    "train": null,
+    "val": null
+  },
+  "scope_train": {
+    "scope": "complete_conditions",
+    "n_input": 581542,
+    "steps": [
+      {
+        "rule": "glucose_raw known",
+        "n_excluded": 22508,
+        "n_excluded_women": 17778,
+        "n_excluded_men": 4730
+      },
+      {
+        "rule": "bmi_measured == 1",
+        "n_excluded": 6422,
+        "n_excluded_women": 5525,
+        "n_excluded_men": 897
+      },
+      {
+        "rule": "hypertension not null",
+        "n_excluded": 1689,
+        "n_excluded_women": 1511,
+        "n_excluded_men": 178
+      }
+    ],
+    "n_in_scope": 550923,
+    "in_scope_share": 0.947349,
+    "excluded_share_by_sex_age": {
+      "sex=0, age=15-24": 0.05259,
+      "sex=0, age=25-34": 0.041537,
+      "sex=0, age=35+": 0.051089,
+      "sex=1, age=15-24": 0.078911,
+      "sex=1, age=25-34": 0.081199,
+      "sex=1, age=35+": 0.081356
+    }
+  },
+  "scope_val": {
+    "scope": "complete_conditions",
+    "n_input": 124618,
+    "steps": [
+      {
+        "rule": "glucose_raw known",
+        "n_excluded": 4824,
+        "n_excluded_women": 3845,
+        "n_excluded_men": 979
+      },
+      {
+        "rule": "bmi_measured == 1",
+        "n_excluded": 1413,
+        "n_excluded_women": 1216,
+        "n_excluded_men": 197
+      },
+      {
+        "rule": "hypertension not null",
+        "n_excluded": 330,
+        "n_excluded_women": 301,
+        "n_excluded_men": null
+      }
+    ],
+    "n_in_scope": 118051,
+    "in_scope_share": 0.947303,
+    "excluded_share_by_sex_age": {
+      "sex=0, age=15-24": 0.0523,
+      "sex=0, age=25-34": 0.042277,
+      "sex=0, age=35+": 0.051972,
+      "sex=1, age=15-24": 0.081081,
+      "sex=1, age=25-34": 0.075266,
+      "sex=1, age=35+": 0.07722
+    }
+  },
+  "encoded_per_sex": {
+    "0": 86723,
+    "1": 13277
+  },
+  "encoding_exclusions": {
+    "invalid_conditions": {
+      "n_excluded": null,
+      "excluded_per_sex": {
+        "0": null,
+        "1": null
+      }
+    },
+    "nonfinite_generated": {
+      "n_excluded": null,
+      "excluded_per_sex": {
+        "0": null,
+        "1": null
+      }
+    },
+    "invalid_categories": {
+      "n_excluded": null,
+      "excluded_per_sex": {
+        "0": null,
+        "1": null
+      }
+    },
+    "unsupported_state": {
+      "n_excluded": null,
+      "excluded_per_sex": {
+        "0": null,
+        "1": null
+      }
+    }
+  },
+  "epochs": [
+    {
+      "epoch": 1,
+      "beta": 0.1,
+      "train_loss": 5.58049,
+      "train_recon": 5.20797,
+      "train_kl": 3.72524,
+      "val_recon": 2.75065,
+      "val_kl": 5.76203,
+      "val_elbo": -8.51268,
+      "seconds": 2.0
+    },
+    {
+      "epoch": 2,
+      "beta": 0.2,
+      "train_loss": 2.7493,
+      "train_recon": 1.60482,
+      "train_kl": 5.72239,
+      "val_recon": 0.12965,
+      "val_kl": 8.13147,
+      "val_elbo": -8.26112,
+      "seconds": 3.6
+    },
+    {
+      "epoch": 3,
+      "beta": 0.3,
+      "train_loss": 1.9521,
+      "train_recon": -0.17723,
+      "train_kl": 7.09777,
+      "val_recon": -1.00143,
+      "val_kl": 8.04616,
+      "val_elbo": -7.04473,
+      "seconds": 5.2
+    },
+    {
+      "epoch": 4,
+      "beta": 0.4,
+      "train_loss": 1.6668,
+      "train_recon": -1.22128,
+      "train_kl": 7.22021,
+      "val_recon": -1.95623,
+      "val_kl": 7.74293,
+      "val_elbo": -5.78671,
+      "seconds": 6.8
+    },
+    {
+      "epoch": 5,
+      "beta": 0.5,
+      "train_loss": 1.72098,
+      "train_recon": -1.77083,
+      "train_kl": 6.98364,
+      "val_recon": -2.07472,
+      "val_kl": 6.91227,
+      "val_elbo": -4.83755,
+      "seconds": 8.5
+    },
+    {
+      "epoch": 6,
+      "beta": 0.6,
+      "train_loss": 1.97753,
+      "train_recon": -1.96007,
+      "train_kl": 6.56266,
+      "val_recon": -2.20832,
+      "val_kl": 6.61075,
+      "val_elbo": -4.40243,
+      "seconds": 10.1
+    }
+  ],
+  "best_val_elbo": -4.40243,
+  "peak_memory_mib": 1605.06,
+  "train_seconds": 10.1,
+  "run_type": "quick",
+  "preliminary": true,
+  "demo": false,
+  "status_banner": "PRELIMINARY (quick run)",
+  "run_note": "reduced, untuned run; results are indicative only"
+}
